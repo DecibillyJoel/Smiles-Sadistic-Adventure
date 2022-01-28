@@ -2,7 +2,7 @@
 An endless semi-random bullet hell I created in high school.
 
 Play it here:
-https://technidecimal.github.io/Smiles-Sadistic-Adventure/
+https://DecibillyJoel.github.io/Smiles-Sadistic-Adventure/
 
 Download it here:
 https://drive.google.com/drive/folders/1sUH27hPedGZbkW4vJBh_mpIGjHN6Sj5i?usp=sharing
