@@ -8,7 +8,7 @@ https://DecibillyJoel.github.io/Smiles-Sadistic-Adventure/
 
 ## Watch the preview
 
-https://github.com/user-attachments/assets/4de9e492-813b-44ee-ba36-9ff478500b66
+![Watch](https://github.com/user-attachments/assets/4de9e492-813b-44ee-ba36-9ff478500b66)
 [Watch in a browser page](https://DecibillyJoel.github.io/Smiles-Sadistic-Adventure/preview.html)
 
 ## Source code
