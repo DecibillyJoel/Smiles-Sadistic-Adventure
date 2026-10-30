@@ -8,11 +8,8 @@ https://DecibillyJoel.github.io/Smiles-Sadistic-Adventure/
 
 ## Watch the preview
 
-<!-- Inline video slot. Do this on GitHub: open this file in the editor, click the
-     empty line below this comment, and drag preview.mp4 into the editor. GitHub
-     inserts a player. Delete this comment after the player appears. -->
-
-[Watch the video preview](https://DecibillyJoel.github.io/Smiles-Sadistic-Adventure/preview.html)
+https://github.com/user-attachments/assets/4de9e492-813b-44ee-ba36-9ff478500b66
+[Watch in a browser page](https://DecibillyJoel.github.io/Smiles-Sadistic-Adventure/preview.html)
 
 ## Source code
 
