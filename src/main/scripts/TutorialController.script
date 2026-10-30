@@ -1,0 +1,42 @@
+local HUP = hash("UP")
+local HDOWN = hash("DOWN")
+local HLEFT = hash("LEFT")
+local HRIGHT = hash("RIGHT")
+local HPAUSE = hash("PAUSE")
+local HDASH = hash("DASH")
+local HUP2 = hash("W")
+local HDOWN2 = hash("S")
+local HLEFT2 = hash("A")
+local HRIGHT2 = hash("D")
+local HPAUSE2 = hash("PAUSE2")
+local HDASH2 = hash("DASH2")
+local HEXIT = hash("EXIT")
+
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	self.Page = 1
+end
+
+function final(self)
+	msg.post(".", "release_input_focus")
+end
+
+function on_input(self, action_id, action)
+	if action.pressed or action.repeated then
+		if action_id == HLEFT or action_id == HLEFT2 then
+			local prev = self.Page
+			self.Page = math.max(1,prev - 1)
+			go.set_position(vmath.vector3(0,1080,0),"/Page"..prev)
+			go.set_position(vmath.vector3(0,0,0),"/Page"..self.Page)
+		elseif action_id == HRIGHT or action_id == HRIGHT2 or action_id == HDASH or action_id == HDASH2 or action_id == HPAUSE or action_id == HPAUSE2 or action_id == HEXIT then
+			local prev = self.Page
+			self.Page = math.min(11,prev + 1)
+			if self.Page == 11 or action_id == HEXIT then
+				msg.post("main:/CollectionController#script","tutorial_done")
+			else
+				go.set_position(vmath.vector3(0,1080,0),"/Page"..prev)
+				go.set_position(vmath.vector3(0,0,0),"/Page"..self.Page)
+			end
+		end
+	end
+end

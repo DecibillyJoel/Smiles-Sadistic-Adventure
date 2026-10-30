@@ -1,0 +1,50 @@
+[project]
+title = Smiles' Sadistic Adventure
+
+[bootstrap]
+main_collection = /main/collections/main.collectionc
+
+[input]
+game_binding = /input/game.input_bindingc
+repeat_interval = 0.1
+repeat_delay = 0.35
+
+[display]
+width = 1920
+height = 1080
+fullscreen = 1
+high_dpi = 1
+dynamic_orientation = 1
+update_frequency = 0
+vsync = 1
+
+[script]
+shared_state = 1
+
+[sound]
+max_sound_sources = 256
+max_sound_buffers = 256
+max_sound_data = 256
+max_component_count = 256
+
+[sprite]
+max_count = 256
+
+[label]
+max_count = 256
+
+[physics]
+debug = 0
+max_collisions = 200
+max_contacts = 200
+
+[osx]
+bundle_identifier = club.sithsgamedev.www
+app_icon = /main/icons/Smiles.icns
+
+[windows]
+app_icon = /main/icons/Smiles.ico
+
+[engine]
+run_while_iconified = 1
+

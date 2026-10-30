@@ -1,0 +1,77 @@
+local HCOLLECTIONGAME = hash("game")
+local HCOLLECTIONMENU = hash("menu")
+local HCOLLECTIONTUTORIAL = hash("tutorial")
+local HCOLLECTIONTUTORIALDONE = hash("tutorial_done")
+local HCOLLECTIONLOADED = hash("proxy_loaded")
+local HDIFFICULTYSET = hash("difficulty_set")
+local HDIFFICULTYGET = hash("difficulty_get")
+
+go.property("difficulty",10)
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	TIME:init(self)
+	msg.post(".", "acquire_input_focus")
+	msg.post("#menu","load")
+end
+
+function update(self)
+	TIME:update(self)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == HCOLLECTIONGAME then
+		msg.post("#menu","disable")
+		msg.post("#menu","final")
+		msg.post("#menu","unload")
+		msg.post("#game","load")
+	elseif message_id == HCOLLECTIONMENU then
+		msg.post("#game","disable")
+		msg.post("#game","final")
+		msg.post("#game","unload")
+		msg.post("#menu","load")
+	elseif message_id == HCOLLECTIONTUTORIAL then
+		msg.post("#menu","disable")
+		msg.post("#menu","final")
+		msg.post("#menu","unload")
+		msg.post("#tutorial","load")
+	elseif message_id == HCOLLECTIONTUTORIALDONE then
+		msg.post("#tutorial","disable")
+		msg.post("#tutorial","final")
+		msg.post("#tutorial","unload")
+		msg.post("#menu","load")
+	elseif message_id == HCOLLECTIONLOADED then
+		if sender == msg.url("#menu") then
+			msg.post("menu:/MenuController#script","difficulty_get",{difficulty = go.get("#script","difficulty")})
+		elseif sender == msg.url("#game") then
+			msg.post("game:/Character#script","difficulty_get",{difficulty = go.get("#script","difficulty")})
+		end
+		msg.post(sender, "init")
+		msg.post(sender, "enable")
+		paused = false
+	elseif message_id == HDIFFICULTYSET then
+		go.set("#script", "difficulty", message.difficulty)
+	elseif message_id == HDIFFICULTYGET then
+		msg.post(sender, "difficulty_get", go.get("#script", "difficulty"))
+	end
+end
+
+function final(self)
+	msg.post(".", "release_input_focus")
+	pcall(function()
+		msg.post("#menu","disable")
+		msg.post("#menu","final")
+		msg.post("#menu","unload")
+	end)
+	pcall(function()
+		msg.post("#game","disable")
+		msg.post("#game","final")
+		msg.post("#game","unload")
+	end)
+	pcall(function()
+		msg.post("#tutorial","disable")
+		msg.post("#tutorial","final")
+		msg.post("#tutorial","unload")
+	end)
+end

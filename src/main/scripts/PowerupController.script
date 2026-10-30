@@ -1,0 +1,79 @@
+local HACTIONSET = hash("action_set")
+local HACTIONCOLLIDE = hash("collision_response")
+local HPOWERHEAL = "action_heal"
+local HPOWERSHIELD = "action_shield"
+local HPOWERSCORE = "action_score"
+local HGROUPSHIELD = hash("shield")
+local HGROUPSCORE = hash("score")
+local HGROUPHEALTH = hash("health")
+local actions = {
+	[HGROUPSCORE] = HPOWERSCORE,
+	[HGROUPSHIELD] = HPOWERSHIELD,
+	[HGROUPHEALTH] = HPOWERHEAL
+}
+local sprites = {"score","health","shield"}
+
+go.property("Rotation",0)
+go.property("StartPosition",vmath.vector3(960,1260,0))
+go.property("Headstart",0)
+go.property("Speed",375)
+go.property("Direction",vmath.vector3(0,-1,0))
+go.property("Type",hash("shield"))
+
+local function checkBounds(self)
+	if self.Position.x / self.Target.x >= 1 or self.Position.y / self.Target.y >= 1 then
+		go.delete()
+	end
+end
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	self.TimeStart = TIME:init()
+	self.Rotation = go.get("#script","Rotation")
+	self.StartPosition = go.get("#script","StartPosition")
+	self.Headstart = go.get("#script","Headstart")
+	self.Speed = go.get("#script","Speed")
+	self.Direction = go.get("#script","Direction")
+	self.Type = go.get("#script","Type")
+	self.Position = self.StartPosition + self.Direction*self.Headstart*self.Speed
+	go.set_position(self.Position)
+	go.set_rotation(vmath.quat_rotation_z(math.rad(self.Rotation)))
+	for i,v in pairs(sprites) do
+		if self.Type ~= hash(v) then
+			msg.post("#"..v.."sprite","disable")
+		end
+	end
+	local x,y = self.Direction.x,self.Direction.y
+	local px,py = self.StartPosition.x,self.StartPosition.y
+	local tx = (x < 0 and -180 or ((x > 0) or ((2100 - px) < (px - -180))) and 2100 or -180)
+	local ty = (y < 0 and -180 or ((y > 0) or ((1260 - py) < (py - -180))) and 1260 or -180)
+	self.Target = vmath.vector3(tx,ty,0)
+	checkBounds(self)
+end
+
+function update(self, dt)
+	dt = TIME:update()
+	if paused or not dt then
+		return
+	end
+	local position = self.Position + self.Direction*dt*self.Speed
+	self.Position = position
+	go.set_position(self.Position)
+	checkBounds(self)
+end
+
+function on_message(self, message_id, message, sender)
+	if paused then
+		return
+	end
+	if message_id == HACTIONSET then
+		for i,v in pairs(message) do
+			pcall(go.set,"#script",i,v)
+			self[i] = v
+		end
+	elseif message_id == HACTIONCOLLIDE then
+		msg.post("/HealthAndScore#script",actions[self.Type])
+		go.delete()
+	end
+end

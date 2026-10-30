@@ -1,0 +1,66 @@
+local HACTIONSET = hash("action_set")
+local HACTIONCOLLIDE = hash("collision_response")
+local HGROUP = hash("bullet")
+local maxsounds = 2
+
+go.property("Rotation",0)
+go.property("Speed",600)
+go.property("StartPosition",vmath.vector3(2100,540,0))
+go.property("Headstart",0)
+
+local function checkBounds(self)
+	if self.Position.x / self.Target.x >= 1 or self.Position.y / self.Target.y >= 1 then
+		go.delete()
+	end
+end
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	self.TimeStart = TIME:init()
+	if BULLETSOUNDS <= maxsounds - 1 then
+		BULLETSOUNDS = BULLETSOUNDS + 1
+		msg.post("#BulletSound", "play_sound")
+	end
+	self.Rotation = go.get("#script","Rotation")
+	self.Speed = go.get("#script","Speed")
+	self.StartPosition = go.get("#script","StartPosition")
+	self.Headstart = go.get("#script","Headstart")
+	local rad = math.rad(self.Rotation)
+	self.Direction = vmath.vector3(math.cos(rad),math.sin(rad),0)
+	self.Position = self.StartPosition + self.Direction*self.Headstart*self.Speed
+	go.set_position(self.Position)
+	go.set_rotation(vmath.quat_rotation_z(rad))
+	local x,y = self.Direction.x,self.Direction.y
+	local px,py = self.StartPosition.x,self.StartPosition.y
+	local tx = (x < 0 and -180 or ((x > 0) or ((2100 - px) < (px - -180))) and 2100 or -180)
+	local ty = (y < 0 and -180 or ((y > 0) or ((1260 - py) < (py - -180))) and 1260 or -180)
+	self.Target = vmath.vector3(tx,ty,0)
+	checkBounds(self)
+end
+
+function update(self, dt)
+	dt = TIME:update()
+	if paused or not dt then
+		return
+	end
+	local position = self.Position + self.Direction*dt*self.Speed
+	self.Position = position
+	go.set_position(self.Position)
+	checkBounds(self)
+end
+
+function on_message(self, message_id, message, sender)
+	if paused then
+		return
+	end
+	if message_id == HACTIONSET then
+		for i,v in pairs(message) do
+			pcall(go.set,"#script",i,v)
+			self[i] = v
+		end
+	elseif message_id == HACTIONCOLLIDE then
+		msg.post("/HealthAndScore#script","action_hurt",{typeof = HGROUP})
+		go.delete()
+	end
+end

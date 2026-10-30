@@ -1,0 +1,226 @@
+GAMEINFO = GAMEINFO or {
+	Score = 0,
+	Time = 0
+}
+
+local freq = 0.25
+local pfreq = 6
+local center = vmath.vector3(960,540,0)
+local HWEAPONBASIC = hash("basic")
+local HWEAPONGUN = hash("gun")
+local HWEAPONLASER = hash("laser")
+local HWEAPONBOOMERANG = hash("boomerang")
+local HDIRECTIONLEFT = hash("left")
+local HDIRECTIONRIGHT = hash("right")
+local HATTACKDIRECT = hash("direct")
+local HATTACKTARGET = hash("target")
+local HTWEENLINEAR = hash("linear")
+local HTWEENSINE = hash("sine")
+local HTWEENSINEIN = hash("sinein")
+local HTWEENSINEOUT = hash("sineout")
+local HTWEENQUAD = hash("quad")
+local HTWEENQUADIN = hash("quadin")
+local HTWEENQUADOUT = hash("quadout")
+local HTWEENQUART = hash("quart")
+local HTWEENQUARTIN = hash("quartin")
+local HTWEENQUARTOUT = hash("quartout")
+local HGROUPSHIELD = hash("shield")
+local HGROUPSCORE = hash("score")
+local HGROUPHEALTH = hash("health")
+local HUP = hash("UP")
+local HDOWN = hash("DOWN")
+local HLEFT = hash("LEFT")
+local HRIGHT = hash("RIGHT")
+local HPAUSE = hash("PAUSE")
+local HDASH = hash("DASH")
+local HUP2 = hash("W")
+local HDOWN2 = hash("S")
+local HLEFT2 = hash("A")
+local HRIGHT2 = hash("D")
+local HPAUSE2 = hash("PAUSE2")
+local HDASH2 = hash("DASH2")
+local HEXIT = hash("EXIT")
+local HDIFFICULTYGET = hash("difficulty_get")
+local HDIFFICULTYSET = hash("difficulty_set")
+local weapons = {HWEAPONBASIC,HWEAPONBOOMERANG,HWEAPONGUN,HWEAPONLASER}
+local labels = {"#Start","#Difficulty","#Tutorial"}
+
+local function normalize(vector)
+	if vector.x == 0 and vector.y == 0 and vector.z == 0 then
+		return vector
+	else
+		return vmath.normalize(vector)
+	end
+end
+
+go.property("difficulty",10)
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	self.TimeStart = TIME:init()
+	self.TimePosition = -freq
+	self.FirstTime = true
+	self.Difficulty = go.get("#script","difficulty")
+	self.PowerUp = 0
+	self.Selection = 0
+	msg.post(".","acquire_input_focus")
+	label.set_text("#Difficulty",string.format("Difficulty: %02d",self.Difficulty):gsub("21","BR"))
+	go.set("#Start","color",vmath.vector4(0,1,0,1))
+	sprite.set_constant("#Health","tint",vmath.vector4(0,1,0,1))
+	sprite.set_constant("#Dash","tint",vmath.vector4(1,0.54,0,1))
+	local minutes = math.floor(GAMEINFO.Time/60)
+	local seconds = GAMEINFO.Time%60
+	local milliseconds = seconds%1
+	label.set_text("#Time",string.format("%02d:%02d.%03d",minutes,seconds-milliseconds,math.floor(milliseconds*1000)))
+	label.set_text("#Score",string.format("%09d",math.floor(GAMEINFO.Score)))
+	paused = false
+	msg.post("@system:", "set_vsync", { swap_interval = 1 })
+end
+
+function update(self, dt)
+	dt = TIME:update()
+	if not dt then
+		return
+	end
+	local prev = self.TimePosition
+	local cur = prev + dt
+	if cur >= freq or self.FirstTime then
+		self.FirstTime = false
+		local firstTime = freq*math.floor(prev/freq)+freq
+		local fdt = math.max(0,cur - firstTime)
+		local enemies = math.floor(fdt/freq)+1
+		for i = 0,enemies - 1 do
+			local side = math.random(1,4)
+			local percent,startposition = math.random()
+			if side == 1 then
+				startposition = vmath.vector3(200 + 1520*percent,-150,0)
+			elseif side == 2 then
+				startposition = vmath.vector3(-150,200 + 680*percent,0)
+			elseif side == 3 then
+				startposition = vmath.vector3(200 + 1520*percent,1230,0)
+			else
+				startposition = vmath.vector3(2070,200 + 680*percent,0)
+			end
+			local difference = center - startposition
+			local rotation = math.deg(math.atan2(difference.y,difference.x))%360 + (10 + math.random()*10)*(math.random(0,1)*2 - 1)
+			local rad = math.rad(rotation)
+			local x,y = math.cos(rad),math.sin(rad)
+			local weapon = weapons[math.random(1,4)]
+			local direction = math.random(1,2) == 1 and HDIRECTIONLEFT or HDIRECTIONRIGHT
+			if direction == HDIRECTIONLEFT then
+				rotation = rotation + 180
+			end
+			local px,py = startposition.x,startposition.y
+			local tx = (x < 0 and -150 or ((x > 0) or ((2070 - px) < (px - -150))) and 2070 or -150)
+			local ty = (y < 0 and -150 or ((y > 0) or ((1230 - py) < (py - -150))) and 1230 or -150)
+			local sx,sy = (tx-px)/x,(ty-py)/y
+			local s = (sx <= sy or sy*0 ~= 0) and sx or sy
+			if s*0 ~= 0 then
+				s = 1
+			end
+			local distance = vmath.vector3(x*s,y*s,0)
+			local tween = HTWEENLINEAR
+			local spawntime = 3
+			local exittime = 3
+			local attackfreq = 1
+			if weapon == HWEAPONBOOMERANG then
+				tween = HTWEENSINEOUT
+				spawntime = 2.25
+				exittime = 2.25
+				distance = distance*(2/5 + math.random()/2)
+				rotation = rotation + math.random(0,1)*180
+			elseif weapon ~= HWEAPONBASIC then
+				tween = HTWEENQUARTOUT
+				distance = distance*(1/6 + math.random()/5)
+				spawntime = 1
+				attackfreq = weapon == HWEAPONGUN and 0.33 or 1.3
+				attacktime = weapon == HWEAPONGUN and 1 or 1.3
+				exittime = 1
+			else
+				rotation = rotation + math.random(0,1)*180
+			end
+			local drift = normalize(distance)*150
+			factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+				StartPosition = startposition,
+				Distance = distance,
+				RotateOffset = rotation,
+				Weapon = weapon,
+				AttackDrift = drift,
+				Tween = tween,
+				SpawnTime = spawntime,
+				AttackTime = attacktime,
+				ExitTime = exittime,
+				Direction = direction,
+				AttackFrequency = attackfreq
+			},1)
+		end
+		cur = cur%freq
+		self.PowerUp = self.PowerUp + enemies
+		if self.PowerUp >= pfreq then
+			local typeof = math.random(1,3)
+			if typeof == 1 then
+				typeof = HGROUPSCORE
+			elseif typeof == 2 then
+				typeof = HGROUPHEALTH
+			else
+				typeof = HGROUPSHIELD
+			end
+			local position = vmath.vector3(960 + (75 + math.random()*670)*(math.random(0,1)*2 - 1),1260,0)
+			factory.create("/Steroids#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+				StartPosition = position,
+				Type = typeof
+			},1)
+			self.PowerUp = self.PowerUp - pfreq
+		end
+	end
+	self.TimePosition = cur
+end
+
+function on_input(self, action_id, action)
+	if action.pressed or action.repeated then
+		if action_id == HUP or action_id == HUP2 then
+			local prev = self.Selection
+			self.Selection = (prev - 1)%3
+			go.set(labels[prev + 1],"color",vmath.vector4(1,1,1,1))
+			go.set(labels[self.Selection + 1],"color",vmath.vector4(0,1,0,1))
+		elseif action_id == HDOWN or action_id == HDOWN2 then
+			local prev = self.Selection
+			self.Selection = (prev + 1)%3
+			go.set(labels[prev + 1],"color",vmath.vector4(1,1,1,1))
+			go.set(labels[self.Selection + 1],"color",vmath.vector4(0,1,0,1))
+		elseif action_id == HLEFT or action_id == HLEFT2 then
+			if self.Selection == 1 then
+				self.Difficulty = math.max(0,self.Difficulty - 1)
+				label.set_text("#Difficulty",string.format("Difficulty: %02d", self.Difficulty))
+			end
+		elseif action_id == HRIGHT or action_id == HRIGHT2 then
+			if self.Selection == 1 then
+				self.Difficulty = math.min(21,self.Difficulty + 1)
+				label.set_text("#Difficulty",string.format("Difficulty: %02d", self.Difficulty):gsub("21","BR"))
+			end
+		elseif action_id == HPAUSE or action_id == HPAUSE2 or action_id == HDASH or action_id == HDASH2 then
+			if self.Selection == 0 then
+				msg.post("main:/CollectionController#script","difficulty_set",{difficulty = self.Difficulty})
+				msg.post("main:/CollectionController#script","game")
+			elseif self.Selection == 2 then
+				msg.post("main:/CollectionController#script","difficulty_set",{difficulty = self.Difficulty})
+				msg.post("main:/CollectionController#script","tutorial")
+			end
+		elseif action_id == HEXIT then
+			msg.post("@system:","exit",{code = 0})
+		end
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == HDIFFICULTYGET then
+		go.set("#script","difficulty",message.difficulty)
+		self.Difficulty = message.difficulty
+		label.set_text("#Difficulty",string.format("Difficulty: %02d",self.Difficulty):gsub("21","BR"))
+	end
+end
+
+function final(self)
+	msg.post(".", "release_input_focus")
+end

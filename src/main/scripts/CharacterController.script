@@ -1,0 +1,1027 @@
+math.randomseed(os.time())
+math.random()
+
+paused = false
+
+local max = vmath.vector3(1770,930,0)
+local min = vmath.vector3(150,150,0)
+local direction = vmath.vector3(0,0,0)
+local origin = vmath.vector3(960,540,0)
+local center = vmath.vector3(origin.x,origin.y,0)
+local position = vmath.vector3(origin.x,origin.y,0)
+local speed = vmath.vector3(500,500,0)
+local boundtarg = vmath.vector3(max.x-min.x,max.y-min.y,2000)
+local centertarg = vmath.vector3(center.x,center.y,1000)
+local dash = 1
+local dashstart = 1
+local dashing = false
+local dashdirection = vmath.vector3(0,0,0)
+local dashblink = 14*math.pi
+local dashpause = 0
+local dashnextclone = -1
+local timeposition = 0
+local timelength = 35
+local powerup = 2
+local target = 0
+local difficulty = 0
+local bossrush = false
+local phase = 0
+local phases = {1,2,3,4,5,6,7,8,9}
+local phaseinfo = {}
+local HUP = hash("UP")
+local HDOWN = hash("DOWN")
+local HLEFT = hash("LEFT")
+local HRIGHT = hash("RIGHT")
+local HPAUSE = hash("PAUSE")
+local HDASH = hash("DASH")
+local HUP2 = hash("W")
+local HDOWN2 = hash("S")
+local HLEFT2 = hash("A")
+local HRIGHT2 = hash("D")
+local HPAUSE2 = hash("PAUSE2")
+local HDASH2 = hash("DASH2")
+local HEXIT = hash("EXIT")
+local HTILDE = hash("TILDE")
+local HACTIONSET = hash("action_set")
+local HPOWERSCORE = hash("score")
+local HPOWERSHIELD = hash("shield")
+local HPOWERHEALTH = hash("health")
+local HWEAPONBASIC = hash("basic")
+local HWEAPONGUN = hash("gun")
+local HWEAPONLASER = hash("laser")
+local HWEAPONBOOMERANG = hash("boomerang")
+local HDIRECTIONLEFT = hash("left")
+local HDIRECTIONRIGHT = hash("right")
+local HATTACKDIRECT = hash("direct")
+local HATTACKTARGET = hash("target")
+local HTWEENLINEAR = hash("linear")
+local HTWEENSINE = hash("sine")
+local HTWEENSINEIN = hash("sinein")
+local HTWEENSINEOUT = hash("sineout")
+local HTWEENQUAD = hash("quad")
+local HTWEENQUADIN = hash("quadin")
+local HTWEENQUADOUT = hash("quadout")
+local HTWEENQUART = hash("quart")
+local HTWEENQUARTIN = hash("quartin")
+local HTWEENQUARTOUT = hash("quartout")
+local HTWEENBINARY = hash("binary")
+local HGROUPSHIELD = hash("shield")
+local HGROUPSCORE = hash("score")
+local HGROUPHEALTH = hash("health")
+local HDIFFICULTYGET = hash("difficulty_get")
+local HDIFFICULTYSET = hash("difficulty_set")
+local keys = {
+	UP = false,
+	DOWN = false,
+	LEFT = false,
+	RIGHT = false,
+	PAUSE = false,
+	DASH = false,
+	EXIT = false,
+	TILDE = false,
+	[HUP] = false,
+	[HDOWN] = false,
+	[HLEFT] = false,
+	[HRIGHT] = false,
+	[HUP2] = false,
+	[HDOWN2] = false,
+	[HLEFT2] = false,
+	[HRIGHT2] = false,
+	[HPAUSE] = false,
+	[HPAUSE2] = false,
+	[HDASH] = false,
+	[HDASH2] = false,
+	[HEXIT] = false,
+	[HTILDE] = false
+}
+
+go.property("difficulty",3.5)
+
+local function setBounds(x,y)
+	local skew = center - origin
+	local translate = vmath.vector3(origin.x - 960,origin.y - 540,0)
+	min.x = translate.x + 150 + (1 - (x/1620))*(810 + skew.x)
+	max.x = translate.x + 1770 - (1 - (x/1620))*(810 - skew.x)
+	min.y = translate.y + 150 + (1 - (y/780))*(390 + skew.y)
+	max.y = translate.y + 930 - (1 - (y/780))*(390 - skew.y)
+	go.set_position(vmath.vector3(min.x - 30,origin.y,0),"/Boundaries/LeftWall")
+	go.set_position(vmath.vector3(max.x + 30,origin.y,0),"/Boundaries/RightWall")
+	go.set_position(vmath.vector3(origin.x,min.y - 30,0),"/Boundaries/Floor")
+	go.set_position(vmath.vector3(origin.x,max.y + 30,0),"/Boundaries/Ceiling")
+end
+
+local function setCenter(x,y)
+	center = vmath.vector3(x,y,0)
+	setBounds(max.x-min.x,max.y-min.y)
+end
+
+local function clamp(a,x,b)
+	if a > b then
+		a,b = b,a
+	end
+	return math.max(a,math.min(x,b))
+end
+
+local function random(x,y)
+	return x + math.floor(math.random()*(y-x+1))
+end
+
+local function normalize(vector)
+	if vector.x == 0 and vector.y == 0 and vector.z == 0 then
+		return vector
+	else
+		return vmath.normalize(vector)
+	end
+end
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	self.TimeStart = TIME:init(self)
+	for i,v in pairs(keys) do
+		keys[i] = false
+	end
+	msg.post(".", "acquire_input_focus")
+	pause = false
+	max = vmath.vector3(1770,930,0)
+	min = vmath.vector3(150,150,0)
+	direction = vmath.vector3(0,0,0)
+	origin = vmath.vector3(960,540,0)
+	center = vmath.vector3(origin.x,origin.y,0)
+	position = vmath.vector3(origin.x,origin.y,0)
+	speed = vmath.vector3(500,500,0)
+	boundtarg = vmath.vector3(max.x-min.x,max.y-min.y,2000)
+	centertarg = vmath.vector3(center.x,center.y,1000)
+	dash = 1
+	dashstart = 1
+	dashing = false
+	dashdirection = vmath.vector3(0,0,0)
+	dashpause = 0
+	dashnextclone = -1
+	difficulty = go.get("#script","difficulty")
+	bossrush = difficulty == 6.25
+	timeposition = 0
+	timelength = bossrush and 2 or (35 - 3.33*difficulty)
+	powerup = 2
+	target = 0
+	phase = 0
+	phases = {1,2,3,4,5,6,7,8,9}
+	phaseinfo = {}
+	setBounds(boundtarg.x,boundtarg.y)
+end
+
+function update(self, dt)
+	dt = TIME:update()
+	if not dt then
+		return
+	end
+	if (keys.PAUSE or keys.EXIT) and not paused then
+		paused = true
+		factory.create("/PauseMenuSpawn#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{},1)
+	end
+	if paused then
+		return
+	end
+	local centercur = vmath.vector3(center.x,center.y,centertarg.z)
+	if centercur ~= centertarg then
+		local speed = centertarg.z*dt
+		if centercur.x ~= centertarg.x then
+			local dirx = centercur.x < centertarg.x and 1 or -1
+			centercur.x = clamp(centercur.x,centercur.x + speed*dirx,centertarg.x)
+		end
+		if centercur.y ~= centertarg.y then
+			local diry = centercur.y < centertarg.y and 1 or -1
+			centercur.y = clamp(centercur.y,centercur.y + speed*diry,centertarg.y)
+		end
+		setCenter(centercur.x,centercur.y)
+	end
+	local boundcur = vmath.vector3(max.x-min.x,max.y-min.y,boundtarg.z)
+	if boundcur ~= boundtarg then
+		local speed = boundtarg.z*dt
+		if boundcur.x ~= boundtarg.x then
+			local dirx = boundcur.x < boundtarg.x and 1 or -1
+			boundcur.x = clamp(boundcur.x,boundcur.x + speed*dirx,boundtarg.x)
+		end
+		if boundcur.y ~= boundtarg.y then
+			local diry = boundcur.y < boundtarg.y and 1 or -1
+			boundcur.y = clamp(boundcur.y,boundcur.y + speed*diry,boundtarg.y)
+		end
+		setBounds(boundcur.x,boundcur.y)
+	end
+	if (keys.UP or keys.DOWN or keys.LEFT or keys.RIGHT) and not dashing then
+		if max.y ~= min.y then
+			if keys.UP and not keys.DOWN then
+				direction.y = speed.y
+			elseif keys.DOWN and not keys.UP then
+				direction.y = -speed.y
+			else
+				direction.y = 0
+			end
+		end
+		if max.x ~= min.x then
+			if keys.LEFT and not keys.RIGHT then
+				direction.x = -speed.x
+			elseif keys.RIGHT and not keys.LEFT then
+				direction.x = speed.x
+			else
+				direction.x = 0
+			end
+		end
+		dashdirection = direction
+		direction = direction*dt
+	else
+		direction = vmath.vector3(0,0,0)
+		if not dashing then
+			dashdirection = vmath.vector3(0,0,0)
+		end
+	end
+	if not dashing then
+		if dashpause == 0 then
+			dash = math.min(1,dash + dt/3)
+		else
+			dashpause = dashpause - dt
+			if dashpause < 0 then
+				dash = math.min(1,dash - dashpause/3)
+				dashpause = 0
+			end
+		end
+	end
+	if dashing == true or (keys.DASH == true and dashpause == 0 and dash > dt*3 and dashdirection ~= vmath.vector3(0,0,0)) then
+		if not dashing then
+			msg.post("/HealthAndScore#script","action_dash",{dash = dash,dashing = true,dashpause = 0,bounces = 0,power = 0})
+			dashing = true
+			dashstart = dash
+		end
+		local edt = dt*3
+		dash = dash - edt
+		if dash < 0 then
+			edt = edt + dash
+			dash = 0
+		end
+		if dash == 0 or keys.DASH == false then
+			dashpause = 1 - edt/3
+			dashing = false
+			msg.post("/HealthAndScore#script","action_dash",{dash = dash,dashing = false,dashpause = dashpause,bounces = 1,power = dashstart - dash})
+		end
+		direction = dashdirection*edt
+		if TIME.currentTime >= dashnextclone then
+			factory.create("/CheapCGI#factory",vmath.vector3(position.x,position.y,0),vmath.quat_rotation_z(0),{
+				TimePosition = edt/3
+			},0.5)
+			dashnextclone = TIME.currentTime + 1/60
+		end
+	end
+	local dashtint = dashing and 1 or (dashpause ~= 0 and 0.6+0.4*math.cos(dashpause*dashblink/3) or 0.75+0.25*math.cos(dash*dashblink))
+	sprite.set_constant("#sprite","tint",vmath.vector4(dashtint,dashtint,dashtint,1))
+	local newx = position.x+direction.x
+	local newy = position.y+direction.y
+	local clampx = clamp(min.x,newx,max.x)
+	local clampy = clamp(min.y,newy,max.y)
+	local newposition = vmath.vector3(clampx,clampy,0)
+	if dashing and (clampx ~= newx or clampy ~= newy) then
+		local remainingx = newx - clampx
+		local remainingy = newy - clampy
+		local bounds = max - min
+		local xbounces,ybounces = 0,0
+		if bounds.x ~= 0 and remainingx ~= 0 then
+			local finalx = (newx - min.x)%(bounds.x*2)
+			if finalx > bounds.x then
+				finalx = 2*bounds.x - finalx
+			end
+			newposition.x = min.x + finalx
+			xbounces = math.floor(math.abs(remainingx)/bounds.x)+1
+			if xbounces%2 == 1 then
+				dashdirection.x = -dashdirection.x
+			end
+		end
+		if bounds.y ~= 0 and remainingy ~= 0 then
+			local finaly = (newy - min.y)%(bounds.y*2)
+			if finaly > bounds.y then
+				finaly = 2*bounds.y - finaly
+			end
+			newposition.y = min.y + finaly
+			ybounces = math.floor(math.abs(remainingy)/bounds.y)+1
+			if ybounces%2 == 1 then
+				dashdirection.y = -dashdirection.y
+			end
+		end
+		if xbounces + ybounces ~= 0 then
+			msg.post("/HealthAndScore#script","action_dash",{dash = dash,dashing = true,dashpause = 0,bounces = xbounces + ybounces,power = dashstart - dash})
+		end
+	end
+	position = newposition
+	go.set_position(newposition)
+	timeposition = timeposition + dt
+	if timeposition >= timelength then
+		timeposition = timeposition - timelength - 2.5
+		phaseinfo = {}
+		if phase == 0 then
+			if #phases == 0 then
+				phaseinfo.Last = phase
+				phases = {1,2,3,4,5,6,7,8,9}
+				table.remove(phases,phase)
+			end
+			phase = table.remove(phases,math.random(1,#phases))
+			if phaseinfo.Last then
+				table.insert(phases,phase)
+				phaseinfo.Last = nil
+			end
+			if phase == 1 then --Undertale stuff
+				timelength = 14.5 --1.5 + 4 + 0.5 + 0.5 + 4 + 0.5 + 0.5 + 0.5 + 0.5 + 0.5 + 1 + 0.5
+				phaseinfo.StartRotation = 360*math.random()
+				phaseinfo.Direction = math.random(0,1)*2 - 1
+			elseif phase == 2 or phase == 3 or phase == 4 then --Guitar hero stuff
+				timelength = 20
+			elseif phase == 5 then --Touhou stuff
+				timelength = 20
+			elseif phase == 6 then --Shapes stuff
+				timelength = 20
+			elseif phase == 7 then --More shapes stuff
+				timelength = 20
+			elseif phase == 8 then --4 corners stuff
+				timelength = 20
+			elseif phase == 9 then --Helicopter stuff
+				timelength = 20
+			else
+				timelength = 20
+			end
+		else
+			phase = 0
+			if not bossrush then
+				difficulty = math.min(difficulty + 0.25,6)
+			end
+			timelength = bossrush and 2 or (35 - 3.33*difficulty)
+		end
+	elseif timeposition >= 0 then	
+		local prev = timeposition - dt
+		if phase == 0 then --Normal phase
+			if prev < 0 and timeposition >= 0 then
+				boundtarg = vmath.vector3(1620,780,2000)
+				centertarg = vmath.vector3(960,540,1000)
+			end
+			local EPS = bossrush and 3.5 or (difficulty/2.5) --enemies per second
+			local PPS = 0.4 --powerups per second
+			local freq = 1/EPS
+			local pfreq = 1/PPS
+			if prev%pfreq >= timeposition%pfreq or dt/pfreq >= 1 or prev < 0 or (prev == 0 and #phases == 9) then
+				local prev = math.max(prev,-pfreq)
+				local firstTime = pfreq*math.floor(prev/pfreq)+pfreq
+				local pdt = math.max(0,timeposition - firstTime)
+				local powerups = bossrush and 3 or (math.floor(pdt/pfreq) + 1)
+				for i = 0,powerups - 1 do
+					powerup = (prev < 0 and i or (powerup + 1))%3
+					local position = vmath.vector3(200 + 1520*math.random(),1260,0)
+					factory.create("/Steroids#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+						StartPosition = position,
+						Type = powerup == 0 and HPOWERHEALTH or (powerup == 1 and HPOWERSCORE or HPOWERSHIELD),
+						Headstart = pdt - (bossrush and 0 or pfreq*i)
+					},1)
+				end
+			end
+			if prev%freq >= timeposition%freq or dt/freq >= 1 or prev < 0 or (prev == 0 and #phases == 9) then
+				local prev = math.max(prev,-freq)
+				local firstTime = freq*math.floor(prev/freq)+freq
+				local fdt = math.max(0,timeposition - firstTime)
+				local enemies = math.floor(fdt/freq) + 1
+				for i = 0,enemies - 1 do
+					local side = math.random(1,4)
+					local percent = math.random()
+					local percent2 = math.random()
+					local percent3 = math.random()
+					local typeof = math.random(1,math.min(4,difficulty/0.25 - 3))
+					target = (prev < 0 and i or (target + 1))%3
+					local position,distance,offset,rotation,ristance,roffset,weapon,variation,drift,rrift,tween,spawntime,attacktime,exittime,direction,target,attackfreq = 
+					vmath.vector3(2100,540,0), --StartPosition
+					vmath.vector3(-2280,0,0), --Distance
+					vmath.vector3(0,0,0), --Offset
+					0, --StartRotation
+					0, --RotateBy
+					0, --RotateOffset,
+					HWEAPONBASIC, --Weapon
+					0, --variation
+					vmath.vector3(-150,0,0), --AttackDrift
+					0, --AttackRotation
+					HTWEENQUARTOUT, --Tween
+					3, --SpawnTime
+					1, --AttackTime
+					3, --ExitTime
+					HDIRECTIONLEFT, --Direction
+					target == 0, --Target
+					0.33 --AttackFrequency
+					if side == 1 then
+						position = vmath.vector3(200 + 1520*percent,-150,0)
+						variation = (960 - position.x)
+						distance = vmath.vector3(200 + 1520*percent2 + variation*percent3,1230,0) - position
+					elseif side == 2 then
+						position = vmath.vector3(-150,200 + 680*percent,0)
+						variation = (540 - position.y)
+						distance = vmath.vector3(2070,200 + 680*percent2 + variation*percent3,0) - position
+					elseif side == 3 then
+						position = vmath.vector3(200 + 1520*percent,1230,0)
+						variation = (960 - position.x)
+						distance = vmath.vector3(200 + 1520*percent2 + variation*percent3,-150,0) - position
+					else
+						position = vmath.vector3(2070,200 + 680*percent,0)
+						variation = (540 - position.y)
+						distance = vmath.vector3(-150,200 + 680*percent2 + variation*percent3,0) - position
+					end
+					if target then
+						local path = go.get_position() - position + vmath.vector3(50*math.random() - 25,50*math.random() - 25,0)
+						local x,y = path.x,path.y
+						local px,py = position.x,position.y
+						local tx = (x < 0 and -150 or ((x > 0) or ((2070 - px) < (px - -150))) and 2070 or -150)
+						local ty = (y < 0 and -150 or ((y > 0) or ((1230 - py) < (py - -150))) and 1230 or -150)
+						local sx,sy = (tx-px)/x,(ty-py)/y
+						local s = (sx <= sy or sy*0 ~= 0) and sx or sy
+						if s*0 ~= 0 then
+							s = 1
+						end
+						distance = path*s
+					end
+					roffset = math.deg(math.atan2(distance.y,distance.x))%360 + math.random(0,1)*180
+					if typeof == 1 then --basic
+						weapon = HWEAPONBASIC
+						tween = HTWEENLINEAR
+					elseif typeof == 2 then --boomerang
+						weapon = HWEAPONBOOMERANG
+						tween = HTWEENSINEOUT
+						spawntime = 2.25
+						exittime = 2.25
+						distance = distance*(2/5 + math.random()/2)
+					else --bullet or laser
+						weapon = typeof == 3 and HWEAPONGUN or HWEAPONLASER
+						distance = distance*(1/6 + math.random()/5)
+						if side == 1 or side == 4 then
+							direction = HDIRECTIONLEFT
+						else
+							direction = HDIRECTIONRIGHT
+						end
+						local endposition = position + distance
+						local target = go.get_position()
+						local X,Y,OX,OY
+						if target ~= endposition then
+							X,Y,OX,OY = target.x,target.y,endposition.x,endposition.y
+						else
+							X,Y,OX,OY = distance.x,distance.y,0,0
+						end
+						roffset = math.deg(math.atan2(Y - OY, X - OX))%360
+						rotation = math.random()*45 - 22.5
+						ristance = math.random()*45 - 22.5 - rotation
+						rrift = math.random()*45 - 22.5
+						if direction == HDIRECTIONLEFT then
+							roffset = roffset - 180
+						end
+						spawntime = 1
+						attackfreq = typeof == 3 and 0.33 or 1.3
+						attacktime = typeof == 3 and 1 or 1.3
+						exittime = 1
+					end
+					drift = normalize(distance)*150
+					factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+						StartPosition = position,
+						Distance = distance,
+						Offset = offset,
+						StartRotation = rotation,
+						RotateBy = ristance,
+						RotateOffset = roffset,
+						Weapon = weapon,
+						AttackDrift = drift,
+						AttackRotate = rrift,
+						Tween = tween,
+						SpawnTime = spawntime,
+						AttackTime = attacktime,
+						ExitTime = exittime,
+						Direction = direction,
+						AttackFrequency = attackfreq
+					},1)
+				end 
+			end
+		elseif phase == 1 then --Undertale phase
+			if prev < 0 then
+				boundtarg = vmath.vector3(450,450,2000)
+			end
+			local freq = 0.1
+			if prev%freq >= timeposition%freq or dt/freq >= 1 or prev < 0 then
+				local prev = math.max(prev,-freq)
+				local firstTime = freq*math.floor(prev/freq)+freq
+				local fdt = math.max(0,timeposition - firstTime)
+				local enemies = math.floor(fdt/freq)+1
+				for i = 0,enemies - 1 do
+					local TP = firstTime + freq*i
+					local rot = 0
+					if TP > 14 then
+						rot = 345 + 60*((TP - 14.5)*2)^2 --345
+					elseif TP > 13 then --13 - 14
+						rot = 225 - 180*(TP - 13) --45
+					elseif TP > 12.5 then --12.5 - 13
+						rot = 285 - 60*((TP - 12.5)*2)^2 --225
+					elseif TP > 12 then --12 - 12.5
+						rot = 285 - 60*((TP - 12.5)*2)^2 --285
+					elseif TP > 11.5 then --11.5 - 12
+						rot = 135 + 180*(TP - 11.5) --225
+					elseif TP > 11 then --11 - 11.5
+						rot = 75 + 60*((TP - 11)*2)^2 --135
+					elseif TP > 10.5 then --10.5 - 11
+						rot = 75 + 60*((TP - 11)*2)^2 --75
+					elseif TP > 6.5 then --6.5 - 10.5
+						rot = 135 - 180*(TP - 6.5) --135
+					elseif TP > 6 then --6 - 6.5
+						rot = 195 - 60*((TP - 6)*2)^2 --135
+					elseif TP > 5.5 then --5.5 - 6
+						rot = 195 - 60*((TP - 6)*2)^2 --195
+					elseif TP > 1.5 then --1.5 - 5.5
+						rot = 135 + 180*(TP - 1.5) --135
+					else --0 - 1.5
+						rot = 60*TP^2 --135
+					end
+					rot = rot*phaseinfo.Direction + phaseinfo.StartRotation
+					local rad = math.rad(rot)
+					local dir = vmath.vector3(math.cos(rad)*500,math.sin(rad)*500,0)
+					local pos = center + dir
+					local x,y,px,py = dir.x,dir.y,pos.x,pos.y
+					local tx = (x < 0 and -150 or ((x > 0) or ((2070 - px) < (px - -150))) and 2070 or -150)
+					local ty = (y < 0 and -150 or ((y > 0) or ((1230 - py) < (py - -150))) and 1230 or -150)
+					local sx,sy = (tx-px)/x,(ty-py)/y
+					local s = (sx <= sy or sy*0 ~= 0) and sx or sy
+					if s*0 ~= 0 then
+						s = 1
+					end
+					local startA = pos + dir*s
+					local distA = pos - startA
+					local headstart = timeposition - TP
+					local spawnTime,exitTime = 1,1
+					local attackTime = 0.55
+					if headstart < 1 then
+						startA = startA + distA*headstart
+						startTime = 1 - headstart
+						distA = distA*startTime
+					elseif headstart < 1.25 then
+						startTime = 0
+						attackTime = 1.25 - headstart
+					else
+						startTime = 0
+						attackTime = 0
+						exitTime = 2.25 - headstart
+						distA = distA*exitTime
+					end
+					local startB = center*2 - startA
+					local distB = -distA
+					factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+						StartPosition = startA,
+						Distance = distA,
+						Weapon = HWEAPONLASER,
+						Direction = HDIRECTIONLEFT,
+						RotateOffset = rot,
+						AttackTime = attackTime,
+						AttackFrequency = attackTime,
+						AttackDrift = normalize(distB)*150,
+						SpawnTime = startTime,
+						ExitTime = exitTime
+					},1)
+					factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+						StartPosition = startB,
+						Distance = distB,
+						Weapon = HWEAPONLASER,
+						Direction = HDIRECTIONRIGHT,
+						RotateOffset = rot,
+						AttackTime = attackTime,
+						AttackFrequency = attackTime,
+						AttackDrift = normalize(distA)*150,
+						SpawnTime = startTime,
+						ExitTime = exitTime
+					},1)
+				end
+			end
+		elseif phase == 2 or phase == 3 then --Guitar hero phases
+			if prev < 0 then
+				boundtarg = vmath.vector3(0,780,2000)
+				centertarg = vmath.vector3(phase == 2 and 150 or 1770,540,1000)
+				phaseinfo.previous = go.get_position().y
+			end
+			local time,freq,TP,PP = (phase == 2 and 2 or 2.5),(phase == 2 and 1.05 or 1.25),timeposition,prev
+			local difficultyScale = math.floor(TP/5)
+			TP = TP - 5*difficultyScale
+			PP = TP - dt
+			time = time - 0.25*difficultyScale
+			freq = freq - 0.15*difficultyScale
+			local spacing = phase == 2 and 125 or 145
+			if prev < 0 or ((PP%freq >= TP%freq or dt/freq >= 1) and not (timeposition >= 5 and PP < 0)) then
+				local PP = math.max(PP,-freq)
+				local firstTime = freq*math.floor(PP/freq)+freq
+				local fdt = math.max(0,TP - firstTime)
+				local enemies = math.floor(fdt/freq)+1
+				for i = 0,enemies - 1 do
+					local space = phaseinfo.previous - math.min(phaseinfo.previous - 150,375*math.random()) + math.min(930 - phaseinfo.previous,375*math.random())
+					phaseinfo.previous = space
+					local headstart = (fdt - freq*i)/time
+					local first = 200 - spacing
+					for v = first + (space-first)%spacing,880 + spacing,spacing do
+						if v ~= space then
+							local px = phase == 2 and 2070 or -150
+							local py = v + (phase == 2 and 0 or (math.random()*500 - 250))
+							local x = phase == 2 and -1920 or 1920
+							local y = v - py
+							local tx = (x < 0 and -150 or ((x > 0) or ((2070 - px) < (px - -150))) and 2070 or -150)
+							local sx = (tx-px)/x
+							x,y = x*sx,y*sx
+							px = px + x*headstart
+							py = py + y*headstart
+							x = x*(1-headstart)
+							y = y*(1-headstart)
+							factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+								StartPosition = vmath.vector3(px,py,0),
+								Distance = vmath.vector3(x,y,0),
+								SpawnTime = time*(1-headstart),
+								Tween = HTWEENLINEAR
+							},1)
+						end
+					end
+				end
+			end
+		elseif phase == 4 then --Double guitar hero phase
+			if prev < 0 then
+				boundtarg = vmath.vector3(0,780,2000)
+				phaseinfo.previous = go.get_position().y
+			end
+			local time,freq,TP,PP = 4.1,2,timeposition,prev
+			local difficultyScale = math.floor(TP/5)
+			TP = TP - 5*difficultyScale
+			PP = TP - dt
+			time = time - 0.4*difficultyScale
+			freq = freq - 0.15*difficultyScale
+			if prev < 0 or ((PP%freq >= TP%freq or dt/freq >= 1) and not (timeposition >= 5 and PP < 0)) then
+				local PP = math.max(PP,-freq)
+				local firstTime = freq*math.floor(PP/freq)+freq
+				local fdt = math.max(0,TP - firstTime)
+				local enemies = math.floor(fdt/freq)+1
+				for i = 0,enemies - 1 do
+					local variance = math.random()
+					local spacevariance = 175*variance
+					local timevariance = (variance^0.5)*(math.random(0,1)*4 - 2)
+					local headstart = fdt - freq*i
+					local space = phaseinfo.previous - math.min(phaseinfo.previous - 150 - spacevariance,150*math.random()) + math.min(930 - phaseinfo.previous - spacevariance,150*math.random())
+					spacevariance = spacevariance*(math.random(0,1)*2 - 1)
+					for side = -1,1,2 do
+						local myspace = space + spacevariance*side
+						local mytimevariance = timevariance*side
+						local mytime = time
+						if mytimevariance > 0 then
+							phaseinfo.previous = myspace
+							mytime = mytime + mytimevariance
+						end
+						local myheadstart = headstart/mytime
+						local first = 75
+						for py = first + (myspace-first)%125,1015,125 do
+							if py ~= myspace then
+								local px,x = 960 + 1110*side,-2220*side
+								px = px + x*myheadstart
+								x = x*(1-myheadstart)
+								factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+									StartPosition = vmath.vector3(px,py,0),
+									Distance = vmath.vector3(x,0,0),
+									SpawnTime = mytime*(1-myheadstart),
+									Tween = HTWEENLINEAR
+								},1)
+							end
+						end
+					end
+				end
+			end
+		elseif phase == 5 then --Touhou phase
+			if prev < 0 then
+				local rot = math.random()*360
+				phaseinfo.Rotation = rot
+				local rotdir = math.random(0,1)*2 - 1
+				phaseinfo.RotationDirection = rotdir
+				local dir = vmath.vector3(760*(math.random()*2 - 1),340*(math.random()*2 - 1),0)
+				local pos = center + dir
+				local x,y,px,py = dir.x,dir.y,pos.x,pos.y
+				local tx = (x < 0 and -150 or ((x > 0) or ((2070 - px) < (px - -150))) and 2070 or -150)
+				local ty = (y < 0 and -150 or ((y > 0) or ((1230 - py) < (py - -150))) and 1230 or -150)
+				local sx,sy = (tx-px)/x,(ty-py)/y
+				local s = (sx <= sy or sy*0 ~= 0) and sx or sy
+				if s*0 ~= 0 then
+					s = 1
+				end
+				local startA = pos + dir*s
+				local distA = pos - startA
+				phaseinfo.startB = center*2 - startA
+				phaseinfo.distB = -distA
+				local spawnTime,exitTime = 1,1
+				local attackTime = 19
+				if timeposition < 1 then
+					startA = startA + distA*timeposition
+					startTime = 1 - timeposition
+					distA = distA*startTime
+				elseif timeposition < 20 then
+					startTime = 0
+					attackTime = 20 - timeposition
+				else
+					startTime = 0
+					attackTime = 0
+					exitTime = 21 - timeposition
+					distA = distA*exitTime
+				end
+				factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+					StartPosition = startA,
+					Distance = distA,
+					Weapon = HWEAPONGUN,
+					Direction = HDIRECTIONLEFT,
+					RotateOffset = rot,
+					AttackTime = attackTime,
+					AttackFrequency = 0.055,
+					AttackDrift = normalize(distA)*150,
+					SpawnTime = startTime,
+					ExitTime = exitTime,
+					AttackRotate = 750*attackTime*rotdir
+				},1)
+			end
+			if prev < 10 and timeposition >= 10 then
+				local startB,distB = phaseinfo.startB,phaseinfo.distB
+				local startTime,exitTime = 1,1
+				local attackTime = 9
+				local TP = timeposition - 10
+				if TP < 1 then
+					startB = startB + distB*TP
+					startTime = 1 - TP
+					distB = distB*startTime
+				elseif TP < 10 then
+					startTime = 0
+					attackTime = 10 - TP
+				else
+					startTime = 0
+					attackTime = 0
+					exitTime = 11 - TP
+					distB = distB*exitTime
+				end
+				factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+					StartPosition = startB,
+					Distance = distB,
+					Weapon = HWEAPONGUN,
+					Direction = HDIRECTIONRIGHT,
+					RotateOffset = -phaseinfo.Rotation,
+					AttackTime = attackTime,
+					AttackFrequency = 0.055,
+					AttackDrift = normalize(distB)*150,
+					SpawnTime = startTime,
+					ExitTime = exitTime,
+					AttackRotate = -750*attackTime*phaseinfo.RotationDirection
+				},1)
+			end
+		elseif phase == 6 then --Shapes phase
+			if prev < 0 then
+				phaseinfo.previous = go.get_position()
+			end
+			local time,freq,TP,PP = 1.75,1.75,timeposition,prev
+			local difficultyScale = math.floor(TP/5)
+			TP = TP - 5*difficultyScale
+			PP = TP - dt
+			freq = freq - 0.165*difficultyScale
+			time = time - 0.02475*timeposition
+			if prev < 0 or ((PP%freq >= TP%freq or dt/freq >= 1) and not (timeposition >= 5 and PP < 0)) then
+				local PP = math.max(PP,-freq)
+				local firstTime = freq*math.floor(PP/freq)+freq
+				local fdt = math.max(0,TP - firstTime)
+				local enemies = math.floor(fdt/freq)+1
+				for i = 0,enemies - 1 do
+					local space = vmath.vector3(
+					phaseinfo.previous.x - math.min(phaseinfo.previous.x - 400,225*math.random()) + math.min(1520 - phaseinfo.previous.x,225*math.random()),
+					phaseinfo.previous.y - math.min(phaseinfo.previous.y - 400,225*math.random()) + math.min(680 - phaseinfo.previous.y,225*math.random()),
+					0)
+					local translate = vmath.vector3(math.random()*500 - 250,math.random()*500 - 250,0)
+					phaseinfo.previous = space + translate
+					local vertices = math.random(4,10)
+					local rot = math.random()*360
+					local rotdir = math.random(0,1)*2 - 1
+					local interior = 90*(vertices - 2)/vertices
+					local dir = math.random(0,1) == 0 and HDIRECTIONLEFT or HDIRECTIONRIGHT
+					local headstart = fdt%freq + freq*i
+					local saferadius = 130
+					local s = 0
+					for i = 1,vertices do
+						local myrot = rot + 360*i*rotdir/vertices
+						local myrad = math.rad(myrot)
+						local x,y = math.cos(myrad),math.sin(myrad)
+						local px,py = space.x + x*saferadius,space.y + y*saferadius
+						local tx = (x < 0 and -150 or ((x > 0) or ((2070 - px) < (px - -150))) and 2070 or -150)
+						local ty = (y < 0 and -150 or ((y > 0) or ((1230 - py) < (py - -150))) and 1230 or -150)
+						local sx,sy = (tx-px)/x,(ty-py)/y
+						local mys = (sx <= sy or sy*0 ~= 0) and sx or sy
+						if mys*0 ~= 0 then
+							mys = 1
+						end
+						s = math.max(mys,s)
+					end
+					for i = 1,vertices do
+						local myrot = rot + 360*i*rotdir/vertices
+						local myrad = math.rad(myrot)
+						local x,y = math.cos(myrad),math.sin(myrad)
+						local px,py = space.x + x*saferadius,space.y + y*saferadius
+						local myturn = myrot - interior - (dir == HDIRECTIONLEFT and 0 or 180)
+						local target = vmath.vector3(px,py,0)
+						local startposition = vmath.vector3(x*s + px,y*s + py,0)
+						local dist = target - startposition
+						factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+							StartPosition = startposition,
+							Distance = normalize(dist),
+							RotateOffset = myturn,
+							SpawnTime = 0,
+							AttackDrift = dist + translate,
+							AttackTime = time,
+							AttackFrequency = time,
+							Weapon = HWEAPONLASER,
+							Direction = dir,
+							Tween = HTWEENLINEAR
+						},1)
+					end
+				end
+			end
+		elseif phase == 7 then --Shapes phase 2
+			local time,freq,TP,PP = 1.4,2,timeposition,prev
+			local difficultyScale = math.floor(TP/5)
+			TP = TP - 5*difficultyScale
+			PP = TP - dt
+			freq = freq - 0.165*difficultyScale
+			time = time - 0.02475*timeposition
+			if prev < 0 or ((PP%freq >= TP%freq or dt/freq >= 1) and not (timeposition >= 5 and PP < 0)) then
+				local PP = math.max(PP,-freq)
+				local firstTime = freq*math.floor(PP/freq)+freq
+				local fdt = math.max(0,TP - firstTime)
+				local enemies = math.floor(fdt/freq)+1
+				for i = 0,enemies - 1 do
+					local space = go.get_position() + vmath.vector3(math.random()*200,math.random()*200,0)
+					local translate = normalize(go.get_position() - space)*300
+					local vertices = math.random(10 - phase,phase == 6 and 10 or 5)
+					local rot = math.random()*360
+					local rotdir = math.random(0,1)*2 - 1
+					local interior = 90*(vertices - 2)/vertices
+					local dir = math.random(0,1) == 0 and HDIRECTIONLEFT or HDIRECTIONRIGHT
+					local headstart = fdt%freq + freq*i
+					local startradius = 130
+					local deltaradius = 200
+					local side = math.random(1,4)
+					local percent,startposition = math.random()
+					if side == 1 then
+						startposition = vmath.vector3(200 + 1520*percent,-150,0)
+					elseif side == 2 then
+						startposition = vmath.vector3(-150,200 + 680*percent,0)
+					elseif side == 3 then
+						startposition = vmath.vector3(200 + 1520*percent,1230,0)
+					else
+						startposition = vmath.vector3(2070,200 + 680*percent,0)
+					end
+					for i = 1,vertices do
+						local myrot = rot + 360*i*rotdir/vertices
+						local myrad = math.rad(myrot)
+						local x,y = math.cos(myrad),math.sin(myrad)
+						local myturn = myrot - interior - (dir == HDIRECTIONLEFT and 0 or 180)
+						local target = space + vmath.vector3(x*startradius,y*startradius,0)
+						local dist = target - startposition
+						local drift = vmath.vector3(x*deltaradius,y*deltaradius,0) + translate
+						factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+							StartPosition = startposition + drift,
+							Distance = dist - drift,
+							RotateOffset = myturn,
+							AttackDrift = drift,
+							AttackTime = time,
+							AttackFrequency = time,
+							Weapon = HWEAPONLASER,
+							Direction = dir,
+							Tween = HTWEENLINEAR
+						},1)
+					end
+				end
+			end
+		elseif phase == 8 then --4 corners
+			if prev < 0 then
+				boundtarg = vmath.vector3(101,101,2000)
+			end
+			local time,freq,TP,PP = 2.07,1.25,timeposition,prev
+			local difficultyScale = math.floor(TP/5)
+			TP = TP - 5*difficultyScale
+			PP = TP - dt
+			freq = freq - 0.14*difficultyScale
+			time = time - 0.015*timeposition
+			if prev >= 0 and ((PP%freq >= TP%freq or dt/freq >= 1) and not (timeposition >= 5 and PP < 0)) then
+				local PP = math.max(PP,-freq)
+				local firstTime = freq*math.floor(PP/freq)+freq
+				local fdt = math.max(0,TP - firstTime)
+				local enemies = math.floor(fdt/freq)+1
+				for i = 0,enemies - 1 do
+					local safeX,safeY,upOrDown,leftOrRight = math.random(0,1)*2 - 1,math.random(0,1)*2 - 1,math.random(0,1)*2 - 1,math.random(0,1)*2 - 1
+					factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+						StartPosition = vmath.vector3(960 - safeX*25,540 + 610*upOrDown,0),
+						Distance = vmath.vector3(0,-1200*upOrDown,0),
+						SpawnTime = time,
+						Tween = HTWEENLINEAR
+					},1)
+					factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+						StartPosition = vmath.vector3(960 + 1030*leftOrRight,540 - safeY*25,0),
+						Distance = vmath.vector3(-2040*leftOrRight,0,0),
+						SpawnTime = time,
+						Tween = HTWEENLINEAR
+					},1)
+				end
+			end
+		elseif phase == 9 then --Helicopter
+			if prev < 0 then
+				boundtarg = vmath.vector3(780,780,2000)
+				local side = math.random(1,4)
+				local percent = math.random()
+				local startposition
+				if side == 1 then
+					startposition = vmath.vector3(200 + 1520*percent,-150,0)
+				elseif side == 2 then
+					startposition = vmath.vector3(-150,200 + 680*percent,0)
+				elseif side == 3 then
+					startposition = vmath.vector3(200 + 1520*percent,1230,0)
+				else
+					startposition = vmath.vector3(2070,200 + 680*percent,0)
+				end
+				local dist = center - startposition
+				dist = dist - normalize(dist)*235
+				--[[local startposition = vmath.vector3(math.random(0,1)*2220 - 150,math.random()*1380 - 150,0)
+				local dist = center - startposition
+				dist = normalize(dist)*400]]
+				local attackTime = 19 - timeposition
+				local blades = math.random(1,6) --blades
+				local bpb = 11 - blades --bullets per blade
+				local rps = 360*bpb --rotations per second
+				local sps = blades*bpb --shots per second
+				local rpsm = (59 + 37*(6 - blades)) -- rotations per second mutation
+				local timescale = math.random(0,1)*2 - 1
+				factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+					StartPosition = startposition,
+					Distance = dist,
+					Weapon = HWEAPONGUN,
+					Direction = math.random(0,1) == 0 and HDIRECTIONLEFT or HDIRECTIONRIGHT,
+					RotateOffset = math.deg(math.atan2(position.y - startposition.y,position.x - startposition.x)) + 180/blades,
+					AttackTime = attackTime,
+					AttackFrequency = 1/sps,
+					AttackDrift = normalize(dist)*470,
+					SpawnTime = 1,
+					ExitTime = 1,
+					AttackRotate = rps*timescale*attackTime,
+					PropertyMutation = vmath.vector4(1,10,rpsm*timescale,0.125)
+				},1)
+			end
+		else
+			if timeposition%5 <= prev%5 then
+				factory.create("/USSRCommies#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+					StartPosition = vmath.vector3(0,540,0),
+					Distance = vmath.vector3(600,0,0),
+					Weapon = HWEAPONLASER,
+					Direction = HDIRECTIONRIGHT,
+					AttackTime = 1.3,
+					AttackFrequency = 1.3
+				},1)
+			end
+		end --elseif
+	end
+end
+
+function on_input(self, action_id, action)
+	local pressed = action.pressed
+	if (pressed or action.released) and keys[action_id] == not pressed then
+		keys[action_id] = pressed
+		if action_id == HUP or action_id == HUP2 then
+			keys.UP = pressed or keys[action_id == HUP and HUP2 or HUP]
+		elseif action_id == HDOWN or action_id == HDOWN2 then
+			keys.DOWN = pressed or keys[action_id == HDOWN and HDOWN2 or HDOWN]
+		elseif action_id == HLEFT or action_id == HLEFT2 then
+			keys.LEFT = pressed or keys[action_id == HLEFT and HLEFT2 or HLEFT]
+		elseif action_id == HRIGHT or action_id == HRIGHT2 then
+			keys.RIGHT = pressed or keys[action_id == HRIGHT and HRIGHT2 or HRIGHT]
+		elseif action_id == HPAUSE or action_id == HPAUSE2 then
+			keys.PAUSE = pressed or keys[action_id == HPAUSE and HPAUSE2 or HPAUSE]
+		elseif action_id == HDASH or action_id == HDASH2 then
+			keys.DASH = pressed or keys[action_id == HDASH and HDASH2 or HDASH]
+		elseif action_id == HEXIT then
+			keys.EXIT = pressed
+		elseif action_id == HTILDE then
+			keys.TILDE = pressed
+		end
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if paused then
+		return
+	end
+	if message_id == HACTIONSET then
+		for i,v in pairs(message) do
+			pcall(go.set,"#script",i,v)
+			self[i] = v
+		end
+	elseif message_id == HDIFFICULTYGET then
+		local newdifficulty = 1 + message.difficulty/4
+		go.set("#script","difficulty",newdifficulty)
+		difficulty = newdifficulty
+		bossrush = difficulty == 6.25
+		timelength = bossrush and 2 or (35 - 3.33*difficulty)
+	end
+end
+
+function final(self)
+	msg.post(".", "release_input_focus")
+end

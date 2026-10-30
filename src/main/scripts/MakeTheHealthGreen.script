@@ -1,0 +1,4 @@
+function init(self)
+	sprite.set_constant("#Health","tint",vmath.vector4(0,1,0,1))
+	sprite.set_constant("#Dash","tint",vmath.vector4(1,0.54,0,1))
+end

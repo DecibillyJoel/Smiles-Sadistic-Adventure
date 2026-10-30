@@ -1,0 +1,65 @@
+local HACTIONSET = hash("action_set")
+local HACTIONUPDATE = hash("action_update")
+
+go.property("Value",0)
+go.property("TimeLength",1)
+go.property("Distance",30)
+go.property("StartPosition",vmath.vector3(1323,1000,0))
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	self.TimeStart = TIME:init()
+	self.Value = go.get("#script","Value")
+	self.TimeLength = go.get("#script","TimeLength")
+	self.Distance = go.get("#script","Distance")
+	self.StartPosition = go.get("#script","StartPosition")
+	self.Direction = vmath.vector3(0,-self.Distance,0)
+	self.TimePosition = 0
+	local str = string.format("%.1f",self.Value):gsub("%.0","")
+	if self.Value < 0 then
+		go.set("#label","color",vmath.vector4(1,0,0,0))
+	else
+		go.set("#label","color.w",0)
+		str = "+"..str
+	end
+	label.set_text("#label",str)
+end
+function update(self, dt)
+	dt = TIME:update()
+	if paused or not dt then
+		return
+	end
+	self.TimePosition = self.TimePosition + dt
+	if self.TimePosition >= self.TimeLength then
+		go.delete()
+	else
+		go.set("#label","color.w",math.min(0.35,self.TimePosition <= self.TimeLength/2 and self.TimePosition or self.TimeLength - self.TimePosition)/0.35)
+		go.set_position(self.StartPosition + self.Direction*(self.TimePosition/self.TimeLength))
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if paused then
+		return
+	end
+	if message_id == HACTIONSET then
+		for i,v in pairs(message) do
+			pcall(go.set,"#script",i,v)
+			self[i] = v
+		end
+	elseif message_id == HACTIONUPDATE then
+		self.Value = self.Value + message.Value
+		local str = string.format("%.1f",self.Value):gsub("%.0","")
+		if self.Value < 0 then
+			go.set("#label","color",vmath.vector4(1,0,0,0))
+		else
+			go.set("#label","color.w",0)
+			str = "+"..str
+		end
+		label.set_text("#label",str)
+		self.TimePosition = math.min(self.TimePosition,0.35)
+		go.set("#label","color.w",math.min(0.35,self.TimePosition <= self.TimeLength/2 and self.TimePosition or self.TimeLength - self.TimePosition)/0.35)
+		go.set_position(self.StartPosition + self.Direction*(self.TimePosition/self.TimeLength))
+	end
+end

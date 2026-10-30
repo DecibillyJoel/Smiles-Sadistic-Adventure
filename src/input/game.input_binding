@@ -1,0 +1,56 @@
+key_trigger {
+  input: KEY_W
+  action: "W"
+}
+key_trigger {
+  input: KEY_UP
+  action: "UP"
+}
+key_trigger {
+  input: KEY_S
+  action: "S"
+}
+key_trigger {
+  input: KEY_DOWN
+  action: "DOWN"
+}
+key_trigger {
+  input: KEY_A
+  action: "A"
+}
+key_trigger {
+  input: KEY_LEFT
+  action: "LEFT"
+}
+key_trigger {
+  input: KEY_D
+  action: "D"
+}
+key_trigger {
+  input: KEY_RIGHT
+  action: "RIGHT"
+}
+key_trigger {
+  input: KEY_ENTER
+  action: "PAUSE"
+}
+key_trigger {
+  input: KEY_BACKSPACE
+  action: "PAUSE2"
+}
+key_trigger {
+  input: KEY_SPACE
+  action: "DASH"
+}
+key_trigger {
+  input: KEY_LSHIFT
+  action: "DASH2"
+}
+key_trigger {
+  input: KEY_ESC
+  action: "EXIT"
+}
+key_trigger {
+  input: KEY_BACKQUOTE
+  action: "TILDE"
+}

@@ -1,0 +1,38 @@
+local HACTIONSET = hash("action_set")
+
+go.property("TimeLength",0.33)
+go.property("TimePosition",0)
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	self.TimeStart = TIME:init()
+	self.TimeLength = go.get("#script","TimeLength")
+	self.TimePosition = go.get("#script","TimePosition")
+	sprite.set_constant("#sprite","tint",vmath.vector4(1,1,1,0.5*self.TimePosition/self.TimeLength))
+end
+
+function update(self, dt)
+	dt = TIME:update()
+	if paused or not dt then
+		return
+	end
+	self.TimePosition = self.TimePosition + dt
+	if self.TimePosition >= self.TimeLength then
+		go.delete()
+	else
+		sprite.set_constant("#sprite","tint",vmath.vector4(1,1,1,0.5*self.TimePosition/self.TimeLength))
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if paused then
+		return
+	end
+	if message_id == HACTIONSET then
+		for i,v in pairs(message) do
+			pcall(go.set,"#script",i,v)
+			self[i] = v
+		end
+	end
+end

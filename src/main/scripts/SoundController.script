@@ -1,0 +1,30 @@
+LASERSOUNDS = 0
+BULLETSOUNDS = 0
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	self.TimeStart = TIME:init()
+	msg.post("#MusicLoop", "play_sound")
+end
+
+function update(self, dt)
+	dt = TIME:update()
+	if not dt then
+		return
+	end
+	if LASERSOUNDS ~= 0 then
+		if (LASERSOUNDS%1 ~= 0 and (LASERSOUNDS - dt*3)%1 >= LASERSOUNDS%1) or dt >= 0.33 then
+			LASERSOUNDS = 0
+		else
+			LASERSOUNDS = math.max(0, LASERSOUNDS - dt*3)
+		end
+	end
+	if BULLETSOUNDS ~= 0 then
+		if (BULLETSOUNDS%1 ~= 0 and (BULLETSOUNDS - dt*7)%1 >= BULLETSOUNDS%1) or dt >= 0.15 then
+			BULLETSOUNDS = 0
+		else
+			BULLETSOUNDS = math.max(0, BULLETSOUNDS - dt*7)
+		end
+	end
+end

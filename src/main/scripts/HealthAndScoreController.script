@@ -1,0 +1,303 @@
+local HACTIONSET = hash("action_set")
+local HACTIONHURT = hash("action_hurt")
+local HACTIONHEAL = hash("action_heal")
+local HACTIONSHIELD = hash("action_shield")
+local HACTIONSCORE = hash("action_score")
+local HACTIONDASH = hash("action_dash")
+local HENEMYBASE = hash("enemy")
+local HENEMYBULLET = hash("bullet")
+local HENEMYLASER = hash("laser")
+local dashblink = 14*math.pi
+
+local enemyHurtValues = {
+	[HENEMYBASE] = 60,
+	[HENEMYBULLET] = 10,
+	[HENEMYLASER] = 60
+}
+
+go.property("HealthMax",100)
+go.property("ShieldMax",0.5)
+go.property("Health",100)
+go.property("Shield",0)
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	self.TimeStart = TIME:init()
+	sprite.set_constant("#Health","tint",vmath.vector4(0,1,0,1))
+	sprite.set_constant("#Dash","tint",vmath.vector4(1,0.54,0,1))
+	self.HealthMax = go.get("#script","HealthMax")
+	self.ShieldMax = go.get("#script","ShieldMax")
+	self.Health = go.get("#script","Health")
+	self.Shield = go.get("#script","Shield")
+	self.ShieldHurt = false
+	self.Time = 0
+	self.Score = 0
+	self.LaserAndBaseBuffer = false
+	self.Dead = false
+	self.HurtTime = 0
+	self.Dash = 1
+	self.Dashing = false
+	self.DashPause = 0
+	self.ScoreUpID = false
+	self.ScoreUpTimer = 0
+	self.HealthUpID = false
+	self.HealthUpTimer = 0
+	self.ScoreDownID = false
+	self.ScoreDownTimer = 0
+	self.HealthDownID = false
+	self.HealthDownTimer = 0
+end
+
+function update(self, dt)
+	dt = TIME:update()
+	if paused or not dt then
+		return
+	end
+	if self.Dead then
+		self.Dead = self.Dead + dt
+		if self.Dead >= 4 then
+			msg.post("main:/CollectionController#script","menu")
+		end
+	end
+	self.HurtSound = true
+	self.LaserAndBaseBuffer = false
+	local W = self.Health / self.HealthMax
+	if W ~= 0 then
+		self.Time = math.min(self.Time + dt,6039.999)
+		local minutes = math.floor(self.Time/60)
+		local seconds = self.Time%60
+		local milliseconds = seconds%1
+		label.set_text("#Time",string.format("%02d:%02d.%03d",minutes,seconds-milliseconds,math.floor(milliseconds*1000)))
+		self.Score = math.min(self.Score + dt*100,999999999)
+		label.set_text("#Score",string.format("%09d",math.floor(self.Score)))
+		go.set("#Health","scale.x",math.max(0.02, W))
+		if self.Shield == self.ShieldMax and not self.ShieldHurt then
+			sprite.set_constant("#Health","tint",vmath.vector4(0,0,1,1))
+		else
+			if self.Shield > dt then
+				self.Shield = self.Shield - dt
+			elseif self.Shield ~= 0 then
+				msg.post("#ShatterSound","play_sound")
+				self.Shield = 0
+			end
+			self.ShieldHurt = false
+			local B = self.Shield / self.ShieldMax
+			local G = W*(1-B)
+			local R = 1-B-G
+			sprite.set_constant("#Health","tint",vmath.vector4(R,G,B,1))
+		end
+	end
+	if self.Dashing == true then
+		local edt = dt*3
+		self.Dash = self.Dash - edt
+		if self.Dash < 0 then
+			edt = edt + self.Dash
+			self.Dash = 0
+		end
+		if self.Dash == 0 then
+			self.DashPause = 1 - edt/3
+			self.Dashing = false
+		end
+	elseif self.DashPause == 0 then
+		self.Dash = math.min(1,self.Dash + dt/3)
+	else
+		self.DashPause = self.DashPause - dt
+		if self.DashPause < 0 then
+			self.Dash = math.min(1,self.Dash - self.DashPause/3)
+			self.DashPause = 0
+		end
+	end
+	go.set("#Dash","scale.x",math.max(0.02, self.Dash))
+	local dashtint = self.Dashing and 1 or (self.DashPause ~= 0 and 0.75+0.25*math.cos(self.DashPause*dashblink/3) or 0.9+0.1*math.cos(self.Dash*dashblink))
+	go.set("#Dash","tint",vmath.vector4(dashtint,0.54*dashtint,0,1))
+	if self.ScoreUpID then
+		self.ScoreUpTimer = self.ScoreUpTimer + dt
+		if self.ScoreUpTimer >= 1 then
+			self.ScoreUpID = false
+		end
+	end
+	if self.ScoreDownID then
+		self.ScoreDownTimer = self.ScoreDownTimer + dt
+		if self.ScoreDownTimer >= 1 then
+			self.ScoreDownID = false
+		end
+	end
+	if self.HealthUpID then
+		self.HealthUpTimer = self.ScoreUpTimer + dt
+		if self.HealthUpTimer >= 1 then
+			self.HealthUpID = false
+		end
+	end
+	if self.HealthDownID then
+		self.HealthDownTimer = self.ScoreDownTimer + dt
+		if self.HealthDownTimer >= 1 then
+			self.HealthDownID = false
+		end
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	local W = self.Health / self.HealthMax
+	if W ~= 0 then
+		if message_id == HACTIONSET then
+			for i,v in pairs(message) do
+				pcall(go.set,"#script",i,v)
+				self[i] = v
+			end
+		elseif message_id == HACTIONHURT and (message.typeof == HENEMYBULLET or not self.LaserAndBaseBuffer) then
+			self.LaserAndBaseBuffer = self.LaserAndBaseBuffer or message.typeof ~= HENEMYBULLET
+			if self.Shield == 0 then
+				local hurt = enemyHurtValues[message.typeof] * (message.typeof == HENEMYBULLET and 1 or TIME.deltaTime)
+				if self.Health <= hurt then
+					--msg.post("#DeathSound","play_sound")
+					self.Health = 0
+					go.delete("/Character")
+					msg.post("#Health","disable")
+					self.Dead = 0
+					paused = false
+				else
+					if self.HurtSound then
+						self.HurtSound = false
+						msg.post("#HurtSound","play_sound")
+					end
+					self.Health = self.Health - hurt
+					W = self.Health / self.HealthMax
+					go.set("#Health","scale.x",W)
+					sprite.set_constant("#Health","tint",vmath.vector4(1-W,W,0,1))
+					if self.HealthDownID then
+						msg.post(self.HealthDownID,"action_update",{
+							Value = -hurt
+						})
+						self.HealthDownTimer = math.min(0.35,self.HealthDownTimer)
+					else
+						self.HealthDownID = factory.create("/MayorZao#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+							Value = -hurt,
+							StartPosition = vmath.vector3(365,1000,0)
+						},1)
+						self.HealthDownTimer = 0
+					end
+				end
+				self.Score = math.max(0,math.min(self.Score,999999999)-hurt*4)
+				label.set_text("#Score",string.format("%09d",math.floor(self.Score)))
+				if self.ScoreDownID then
+					msg.post(self.ScoreDownID,"action_update",{
+						Value = -hurt*4
+					})
+					self.ScoreDownTimer = math.min(0.35,self.ScoreDownTimer)
+				else
+					self.ScoreDownID = factory.create("/MayorZao#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+						Value = -hurt*4,
+						StartPosition = vmath.vector3(1554,1000,0)
+					},1)
+					self.ScoreDownTimer = 0
+				end
+			else
+				if self.HurtSound then
+					self.HurtSound = false
+					msg.post("#GuardSound","play_sound")
+				end
+				if self.Shield == self.ShieldMax then
+					self.ShieldHurt = true
+				end
+			end
+		elseif message_id == HACTIONSHIELD then
+			msg.post("#ShieldSound","play_sound")
+			self.Shield = self.ShieldMax
+			sprite.set_constant("#Health","tint",vmath.vector4(0,0,1,1))
+			self.Score = math.min(self.Score + 500,999999999)
+			label.set_text("#Score",string.format("%09d",math.floor(self.Score)))
+			if self.ScoreUpID then
+				msg.post(self.ScoreUpID,"action_update",{
+					Value = 500
+				})
+				self.ScoreUpTimer = math.min(0.35,self.ScoreUpTimer)
+			else
+				self.ScoreUpID = factory.create("/MayorZao#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+					Value = 500,
+				},1)
+				self.ScoreUpTimer = 0
+			end
+		elseif message_id == HACTIONHEAL then
+			msg.post("#HealSound","play_sound")
+			if self.Health >= self.HealthMax - 25 then
+				self.Health = self.HealthMax
+			else
+				self.Health = self.Health + 25
+			end
+			go.set("#Health","scale.x",W)
+			if self.Shield == self.ShieldMax then
+				sprite.set_constant("#Health","tint",vmath.vector4(0,0,1,1))
+			else
+				local B = self.Shield / self.ShieldMax
+				local G = W*(1-B)
+				local R = 1-B-G
+				sprite.set_constant("#Health","tint",vmath.vector4(R,G,B,1))
+			end
+			self.Score = math.min(self.Score + 500,999999999)
+			label.set_text("#Score",string.format("%09d",math.floor(self.Score)))
+			if self.HealthUpID then
+				msg.post(self.HealthUpID,"action_update",{
+					Value = 500
+				})
+				self.HealthUpTimer = math.min(0.35,self.HealthUpTimer)
+			else
+				self.HealthUpID = factory.create("/MayorZao#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+					Value = 25,
+					StartPosition = vmath.vector3(145,1000,0)
+				},1)
+				self.HealthUpTimer = 0
+			end
+			if self.ScoreUpID then
+				msg.post(self.ScoreUpID,"action_update",{
+					Value = 500
+				})
+				self.ScoreUpTimer = math.min(0.35,self.ScoreUpTimer)
+			else
+				self.ScoreUpID = factory.create("/MayorZao#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+					Value = 500,
+				},1)
+				self.ScoreUpTimer = 0
+			end
+		elseif message_id == HACTIONSCORE then
+			self.Score = math.min(self.Score + 2000,999999999)
+			label.set_text("#Score",string.format("%09d",math.floor(self.Score)))
+			if self.ScoreUpID then
+				msg.post(self.ScoreUpID,"action_update",{
+					Value = 2000
+				})
+				self.ScoreUpTimer = math.min(0.35,self.ScoreUpTimer)
+			else
+				self.ScoreUpID = factory.create("/MayorZao#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+					Value = 2000,
+				},1)
+				self.ScoreUpTimer = 0
+			end
+		elseif message_id == HACTIONDASH then
+			self.Dash = message.dash
+			self.Dashing = message.dashing
+			self.DashPause = message.dashpause
+			if message.bounces ~= 0 and message.power ~= 0 then
+				local points = math.ceil(250*message.bounces*message.power)
+				self.Score = math.min(self.Score + points,999999999)
+				label.set_text("#Score",string.format("%09d",math.floor(self.Score)))
+				if self.ScoreUpID then
+					msg.post(self.ScoreUpID,"action_update",{
+						Value = points
+					})
+					self.ScoreUpTimer = math.min(0.35,self.ScoreUpTimer)
+				else
+					self.ScoreUpID = factory.create("/MayorZao#factory",vmath.vector3(0,0,0),vmath.quat_rotation_z(0),{
+						Value = points,
+					},1)
+					self.ScoreUpTimer = 0
+				end
+			end
+		end
+	end
+end
+
+function final(self)
+	GAMEINFO.Time = self.Time
+	GAMEINFO.Score = self.Score
+end

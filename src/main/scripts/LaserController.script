@@ -1,0 +1,78 @@
+local HACTIONSET = hash("action_set")
+local HACTIONCOLLIDE = hash("collision_response")
+local HGROUP = hash("laser")
+local HSTATEENTER = hash("enter")
+local HSTATEATTACK = hash("attack")
+local HSTATEEXIT = hash("exit")
+local rad270 = math.pi*1.5
+local rad360 = math.pi*2
+local maxsounds = 2
+
+go.property("TimePosition",0)
+go.property("TimeLength",1.3)
+
+local function updateScale(self)
+	if self.State == HSTATEENTER then
+		if self.TimePosition >= 0.15 then
+			self.State = HSTATEATTACK
+			self.TimePosition = self.TimePosition - 0.15
+			--msg.post("#LaserSound", "set_gain", {gain = 1})
+			go.set_scale(1.3+math.sin(rad270 + self.TimePosition*3*rad360)*0.3)
+		else
+			local percent = self.TimePosition / 0.15
+			--msg.post("#LaserSound", "set_gain", {gain = percent})
+			go.set_scale(percent)
+		end
+	elseif self.State == HSTATEATTACK then
+		if self.TimePosition >= self.TimeLength then
+			self.State = HSTATEEXIT
+			self.TimePosition = self.TimePosition - self.TimeLength
+			go.set_scale(1-(self.TimePosition / 0.15))
+		else
+			go.set_scale(1.3+math.sin(rad270 + self.TimePosition*3*rad360)*0.3)
+		end
+	elseif self.TimePosition >= 0.15 then
+		msg.post("#LaserSound", "stop_sound")
+		go.delete()
+	else
+		local percent = 1-(self.TimePosition / 0.15)
+		go.set_scale(percent)
+	end
+end
+
+local TIME = require("main.modules.time")
+
+function init(self)
+	self.TimeStart = TIME:init()
+	if LASERSOUNDS <= maxsounds - 1 then
+		LASERSOUNDS = LASERSOUNDS + 1
+		msg.post("#LaserSound", "play_sound")
+	end
+	self.TimePosition = go.get("#script","TimePosition")
+	self.TimeLength = math.max(0.02,go.get("#script","TimeLength") - 0.3)
+	self.State = HSTATEENTER
+	updateScale(self)
+end
+
+function update(self, dt)
+	dt = TIME:update()
+	if paused or not dt then
+		return
+	end
+	self.TimePosition = self.TimePosition + dt
+	updateScale(self)
+end
+
+function on_message(self, message_id, message, sender)
+	if paused then
+		return
+	end
+	if message_id == HACTIONSET then
+		for i,v in pairs(message) do
+			pcall(go.set,"#script",i,v)
+			self[i] = v
+		end
+	elseif message_id == HACTIONCOLLIDE and self.State == HSTATEATTACK then
+		msg.post("/HealthAndScore#script","action_hurt",{typeof = HGROUP})
+	end
+end

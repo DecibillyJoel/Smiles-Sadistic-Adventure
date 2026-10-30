@@ -1,0 +1,222 @@
+name: "tutorial"
+instances {
+  id: "TutorialController"
+  prototype: "/main/objects/tutorial_pages/TutorialController.go"
+  position {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page5"
+  prototype: "/main/objects/tutorial_pages/Page5.go"
+  position {
+    x: 0.0
+    y: 1080.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page4"
+  prototype: "/main/objects/tutorial_pages/Page4.go"
+  position {
+    x: 0.0
+    y: 1080.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page9"
+  prototype: "/main/objects/tutorial_pages/Page9.go"
+  position {
+    x: 0.0
+    y: 1080.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page1"
+  prototype: "/main/objects/tutorial_pages/Page1.go"
+  position {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page8"
+  prototype: "/main/objects/tutorial_pages/Page8.go"
+  position {
+    x: 0.0
+    y: 1080.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page7"
+  prototype: "/main/objects/tutorial_pages/Page7.go"
+  position {
+    x: 0.0
+    y: 1080.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page2"
+  prototype: "/main/objects/tutorial_pages/Page2.go"
+  position {
+    x: 0.0
+    y: 1080.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page3"
+  prototype: "/main/objects/tutorial_pages/Page3.go"
+  position {
+    x: 0.0
+    y: 1080.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page6"
+  prototype: "/main/objects/tutorial_pages/Page6.go"
+  position {
+    x: 0.0
+    y: 1080.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+instances {
+  id: "Page10"
+  prototype: "/main/objects/tutorial_pages/Page10.go"
+  position {
+    x: 0.0
+    y: 1080.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+scale_along_z: 0

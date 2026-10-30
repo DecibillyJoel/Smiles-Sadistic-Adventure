@@ -1,11 +1,21 @@
 # Smiles-Sadistic-Adventure
-An endless semi-random bullet hell I created in high school.
 
-Play it here:
+An endless semi-random bullet hell I made in Defold in high school.
+
+## Play in the browser
+
 https://DecibillyJoel.github.io/Smiles-Sadistic-Adventure/
 
-Download it here:
-https://drive.google.com/drive/folders/1sUH27hPedGZbkW4vJBh_mpIGjHN6Sj5i?usp=sharing
+## Watch the preview
 
-Preview it here:
-https://drive.google.com/file/d/1x-NZuslaCLmbbzl26vs6ptdJEo3lxlyB/view?usp=sharing
+[Watch the preview video](preview.html)
+
+## Source code
+
+The game source is in the [`src/`](src/) folder. It is a Defold project. Open `src/` with the Defold editor to build or change the game.
+
+The source folder holds `game.project`, plus the `main/` and `input/` folders. The exported build output and the editor cache are not included.
+
+## Download
+
+Grab a build for your platform from the [Releases page](https://github.com/DecibillyJoel/Smiles-Sadistic-Adventure/releases).

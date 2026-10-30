@@ -1,0 +1,60 @@
+images {
+  image: "/main/images/Character.png"
+}
+images {
+  image: "/main/images/EnemyBasic.png"
+}
+images {
+  image: "/main/images/EnemyLaserLeft.png"
+}
+images {
+  image: "/main/images/EnemyLaserRight.png"
+}
+images {
+  image: "/main/images/EnemyGunLeft.png"
+}
+images {
+  image: "/main/images/EnemyGunRight.png"
+}
+images {
+  image: "/main/images/Boundaries.png"
+}
+images {
+  image: "/main/images/Boundaries_Horizontal.png"
+}
+images {
+  image: "/main/images/Boundaries_Vertical.png"
+}
+images {
+  image: "/main/images/LaserBeam.png"
+}
+images {
+  image: "/main/images/LaserBullet.png"
+}
+images {
+  image: "/main/images/HealthPortrait.png"
+}
+images {
+  image: "/main/images/HealthBar.png"
+}
+images {
+  image: "/main/images/PowerupHealth.png"
+}
+images {
+  image: "/main/images/PowerupScore.png"
+}
+images {
+  image: "/main/images/PowerupShield.png"
+}
+images {
+  image: "/main/images/CharacterSmall.png"
+}
+images {
+  image: "/main/images/MenuBlackout.png"
+}
+images {
+  image: "/main/images/DashBar.png"
+}
+margin: 5
+extrude_borders: 0
+inner_padding: 0
