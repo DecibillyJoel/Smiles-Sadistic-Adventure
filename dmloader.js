@@ -318,8 +318,7 @@ var CanvasInput = {
     addToCanvas : function(canvas) {
         canvas.addEventListener("focus", CanvasInput.onFocusIn, false);
         canvas.addEventListener("blur", CanvasInput.onFocusOut, false);
-        canvas.focus();
-        CanvasInput.onFocusIn();
+        // Do not grab focus at load. Focus arrives on a click or a Tab.
     }
 };
 
